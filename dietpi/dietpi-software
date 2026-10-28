@@ -2082,6 +2082,14 @@ Names are accepted as well, e.g. "Node-RED". Legacy numeric IDs are still suppor
 		aSOFTWARE_DOCS[$software_id]=''
 		aSOFTWARE_ALIAS[$software_id]='ros'
 		(( $G_HW_MODEL > 9 )) && aSOFTWARE_AVAIL_G_HW_MODEL[$software_id,$G_HW_MODEL]=0
+		#--------------------------------------------------------------------------------
+		software_id='ncnn'
+		aSOFTWARE_NAME[$software_id]='NCNN'
+		aSOFTWARE_DESC[$software_id]='optimized ncnn deep learning framework'
+		aSOFTWARE_CATX[$software_id]=26
+		aSOFTWARE_DOCS[$software_id]=''
+		aSOFTWARE_DEPS[$software_id]='git'
+		(( $G_HW_MODEL > 9 )) && aSOFTWARE_AVAIL_G_HW_MODEL[$software_id,$G_HW_MODEL]=0
 
 		#--------------------------------------------------------------------------------
 		# Logging Systems (hidden)
@@ -12811,6 +12819,41 @@ _EOF_
 			G_EXEC echo 'source /opt/ros/jazzy/setup.bash' > /etc/bashrc.d/dietpi-ros2.sh
 			G_EXEC source /opt/ros/jazzy/setup.bash
 		fi
+
+		if To_Install ncnn
+		then
+			G_AGI cmake wget
+			G_AGI libprotobuf-dev protobuf-compiler
+			G_AGI gcc g++
+
+			local tmp_dir="/var/tmp/ncnn"
+
+			# Clone the repo into data dir
+			if [[ ! -d $tmp_dir ]]
+			then
+				G_EXEC_OUTPUT=1 G_EXEC git clone --depth=1 https://github.com/Tencent/ncnn.git "$tmp_dir"
+			fi
+
+			G_EXEC eval "mkdir -p '$tmp_dir/build'"
+			G_EXEC eval "cd '$tmp_dir/build'"
+
+			G_EXEC cmake \
+ -D NCNN_DISABLE_RTTI=OFF \
+ -D NCNN_BUILD_TOOLS=ON \
+ -D CMAKE_BUILD_TYPE=Release \
+ -D CMAKE_TOOLCHAIN_FILE=../toolchains/aarch64-linux-gnu.toolchain.cmake ..
+
+			G_EXEC make -j4
+			G_EXEC make install
+
+			G_EXEC cp -r install/include/ncnn /usr/local/include/ncnn
+			G_EXEC mkdir -p /usr/local/lib/ncnn
+			G_EXEC cp -r install/lib/libncnn.a /usr/local/lib/ncnn/libncnn.a
+
+			G_EXEC cd ~
+
+			G_EXEC eval "rm -rf '$tmp_dir'"
+		fi
 	}
 
 	# $1: 0=None 23=LXDE 24=MATE 25=Xfce 26=GNUstep 173=LXQt
@@ -14904,6 +14947,12 @@ _EOF_
 			[[ -f '/etc/apt/trusted.gpg.d/rospian-archive-keyring.gpg' ]] && G_EXEC rm /etc/apt/trusted.gpg.d/rospian-archive-keyring.gpg
 			[[ -f '/etc/apt/sources.list.d/dirk-thomas_colcon.list' ]] && G_EXEC rm /etc/apt/sources.list.d/dirk-thomas_colcon.list
 			[[ -f '/etc/apt/trusted.gpg.d/dirk-thomas_colcon.gpg' ]] && G_EXEC rm /etc/apt/trusted.gpg.d/dirk-thomas_colcon.gpg
+		fi
+
+		if To_Uninstall ncnn
+		then
+			[[ -d '/usr/local/include/ncnn' ]] && G_EXEC rm -R /usr/local/include/ncnn
+			[[ -d '/usr/local/lib/ncnn' ]] && G_EXEC rm -R /usr/local/lib/ncnn
 		fi
 
 		if To_Uninstall scrypted
