@@ -2073,6 +2073,16 @@ Names are accepted as well, e.g. "Node-RED". Legacy numeric IDs are still suppor
 		aSOFTWARE_DOCS[$software_id]='https://dietpi.com/docs/software/desktop/#xfce-power-manager'
  		aSOFTWARE_DEPS[$software_id]='x11'
 
+		# Robotics
+		#--------------------------------------------------------------------------------
+		software_id='ros2'
+		aSOFTWARE_NAME[$software_id]='ROS2'
+		aSOFTWARE_DESC[$software_id]='ros2 jazzy with perception'
+		aSOFTWARE_CATX[$software_id]=26
+		aSOFTWARE_DOCS[$software_id]=''
+		aSOFTWARE_ALIAS[$software_id]='ros'
+		(( $G_HW_MODEL > 9 )) && aSOFTWARE_AVAIL_G_HW_MODEL[$software_id,$G_HW_MODEL]=0
+
 		#--------------------------------------------------------------------------------
 		# Logging Systems (hidden)
 		#--------------------------------------------------------------------------------
@@ -12773,6 +12783,34 @@ WantedBy=multi-user.target
 _EOF_
 			unset -v mnt opt
 		fi
+
+		if To_Install ros2
+		then
+			# APT key
+			local ros_url='https://rospian.github.io/rospian-repo/public/rospian-archive-keyring.asc'
+			G_CHECK_URL "$ros_url"
+			G_EXEC eval "curl -sSfL '$ros_url' | gpg --dearmor -o /etc/apt/trusted.gpg.d/rospian-archive-keyring.gpg --yes"
+
+			# APT list
+			G_EXEC eval "echo 'deb https://rospian.github.io/rospian-repo trixie-jazzy main' > /etc/apt/sources.list.d/dietpi-rospian.list"
+			G_AGUP
+
+			G_AGI ros-jazzy-perception
+
+			# APT key
+			local colcon_url='https://packagecloud.io/dirk-thomas/colcon/gpgkey'
+			G_CHECK_URL "$colcon_url"
+
+			# APT list
+			G_EXEC eval "curl -sSfL '$colcon_url' | gpg --dearmor -o /etc/apt/trusted.gpg.d/dirk-thomas_colcon.gpg --yes"
+			G_EXEC eval "echo 'deb https://packagecloud.io/dirk-thomas/colcon/debian/ trixie main' > /etc/apt/sources.list.d/dirk-thomas_colcon.list"
+			G_AGUP
+
+			G_AGI python3-colcon-common-extensions
+
+			G_EXEC echo 'source /opt/ros/jazzy/setup.bash' > /etc/bashrc.d/dietpi-ros2.sh
+			G_EXEC source /opt/ros/jazzy/setup.bash
+		fi
 	}
 
 	# $1: 0=None 23=LXDE 24=MATE 25=Xfce 26=GNUstep 173=LXQt
@@ -14853,6 +14891,19 @@ _EOF_
 
 			[[ -f '/etc/apt/sources.list.d/dietpi-homebridge.list' ]] && G_EXEC rm /etc/apt/sources.list.d/dietpi-homebridge.list
 			[[ -f '/etc/apt/trusted.gpg.d/dietpi-homebridge.gpg' ]] && G_EXEC rm /etc/apt/trusted.gpg.d/dietpi-homebridge.gpg
+		fi
+
+		if To_Uninstall ros2
+		then
+			G_AGP python3-colcon-common-extensions
+			G_AGP ros-jazzy-perception
+
+			[[ -f '/etc/bashrc.d/dietpi-ros2.sh' ]] && G_EXEC rm /etc/bashrc.d/dietpi-ros2.sh
+
+			[[ -f '/etc/apt/sources.list.d/dietpi-rospian.list' ]] && G_EXEC rm /etc/apt/sources.list.d/dietpi-rospian.list
+			[[ -f '/etc/apt/trusted.gpg.d/rospian-archive-keyring.gpg' ]] && G_EXEC rm /etc/apt/trusted.gpg.d/rospian-archive-keyring.gpg
+			[[ -f '/etc/apt/sources.list.d/dirk-thomas_colcon.list' ]] && G_EXEC rm /etc/apt/sources.list.d/dirk-thomas_colcon.list
+			[[ -f '/etc/apt/trusted.gpg.d/dirk-thomas_colcon.gpg' ]] && G_EXEC rm /etc/apt/trusted.gpg.d/dirk-thomas_colcon.gpg
 		fi
 
 		if To_Uninstall scrypted
